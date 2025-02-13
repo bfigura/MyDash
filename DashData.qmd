@@ -1,0 +1,89 @@
+---
+title: "Untitled"
+format: dashboard
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(rStrava)
+```
+
+```{r}
+app_name <- 'BFigData' # chosen by user
+app_client_id  <- '146969' # an integer, assigned by Strava
+app_secret <- '3240b7aeff06096f2cec7623c93397f4504b6828' # an alphanumeric secret, assigned by Strava
+
+# create the authentication token
+stoken <- httr::config(token = strava_oauth(app_name, app_client_id, app_secret, app_scope="activity:read_all"))
+```
+
+```{r}
+# save the key, do only once
+cat("google_key=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n",
+    file = file.path(normalizePath("~/"), ".Renviron"),
+    append = TRUE)
+
+# retrieve the key, restart R if not found
+google_key <- Sys.getenv("google_key")
+```
+
+```{r}
+myinfo <- get_athlete(stoken, id = '6658400')
+head(myinfo)
+```
+
+```{r}
+library(dplyr)
+
+# get activities by date range
+my_acts <- get_activity_list(stoken, after = as.Date('2020-12-31'))
+act_data <- compile_activities(my_acts) 
+
+# subset by location
+toplo <- act_data %>% 
+    filter(grepl('Run$', name)) %>% 
+    filter(start_latlng2 < -82.63 & start_latlng2 > -82.65) %>% 
+    filter(start_latlng1 < 27.81 & start_latlng1 > 27.78) 
+
+get_heat_map(toplo, key = google_key, col = 'darkred', size = 1.5, distlab = F, alpha = 0.6, zoom = 13)
+```
+
+```{r}
+# plots for most recent activity
+plot_spdsplits(my_acts, stoken, units = 'imperial')
+```
+
+```{r}
+ThisYear <- act_data %>%
+  select(distance, sport_type, start_date_local) %>%
+  filter(sport_type == 'Run' | sport_type == 'TrailRun') %>%
+  mutate(start_date = as_datetime(start_date_local),.keep = "unused") %>%
+  filter(start_date >= "2025-01-01") %>%
+  mutate(distance = distance*0.621371) %>%
+  mutate(CumDist = cumsum(distance))
+ 
+Goal <- tibble(
+  start_date = seq(as.POSIXct("2025-01-01"), 
+                   by = "day", 
+                   length.out = 365), 
+  CumDist = seq(2.76, by = 2.7397, length.out = 365)) %>%
+  filter(start_date < Sys.Date())
+
+
+```
+
+```{r}
+ggplot() + 
+  geom_line(data = ThisYear, 
+            aes(x = start_date, y = CumDist), 
+            color = "blue", 
+            linewidth = 1) +
+  geom_line(data = Goal, 
+            aes(x = start_date, y = CumDist), 
+            color = "red", 
+            linetype = 2,
+            linewidth = 1) +
+  theme_classic()
+
+```

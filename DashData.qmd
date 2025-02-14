@@ -7,6 +7,7 @@ editor: visual
 ```{r}
 library(tidyverse)
 library(rStrava)
+library(scales)
 ```
 
 ```{r}
@@ -68,7 +69,7 @@ Goal <- tibble(
                    by = "day", 
                    length.out = 365), 
   CumDist = seq(2.76, by = 2.7397, length.out = 365)) %>%
-  filter(start_date < Sys.Date())
+  filter(start_date <= Sys.Date())
 
 
 ```
@@ -77,13 +78,34 @@ Goal <- tibble(
 ggplot() + 
   geom_line(data = ThisYear, 
             aes(x = start_date, y = CumDist), 
-            color = "blue", 
-            linewidth = 1) +
+            color = "#fc5200", 
+            linewidth = 1.5) +
   geom_line(data = Goal, 
             aes(x = start_date, y = CumDist), 
-            color = "red", 
+            color = "black", 
             linetype = 2,
             linewidth = 1) +
-  theme_classic()
+  theme_classic() +
+  geom_area(data = ThisYear, 
+          aes(x = start_date, y = CumDist),
+          fill = "#fc5200",
+          alpha = .50) +
+  geom_point(data = ThisYear,
+             aes(x = start_date, 
+                 y = CumDist),
+             shape = 21,
+             size = 3,
+             stroke = 2,
+             color = "#fc5200",
+             fill = "white") +
+  theme(panel.grid.major.y = element_line(color = "gray",
+                                          size = 0.5)) +
+  labs(x = "", y = "") +
+  scale_x_datetime(date_breaks = "1 month",
+                   date_labels = "%b %Y",
+                   limits = as.POSIXct(c("2025-01-01", "2025-02-13")),
+                   expand = c(0.05,0.005)) +
+  scale_y_continuous(position = "right",
+                     expand = c(0,0)) 
 
 ```
